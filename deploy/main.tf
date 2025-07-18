@@ -36,7 +36,7 @@ variable "gcp_project" {
 
 variable "gcp_zone" {
   description = "The GCP zone to deploy to."
-  default     = "us-west1-a" # T4 GPUs are widely available here. Check for availability in your region.
+  default     = "us-east1-c" # T4 GPUs are widely available here. Check for availability in your region.
 }
 
 variable "instance_name" {
