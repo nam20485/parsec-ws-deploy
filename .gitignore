@@ -37,3 +37,5 @@ override.tf.json
 terraform.rc
 deploy/.terraform.lock.hcl
 .gitignore
+.trunk/trunk.yaml
+.trunk/configs/.markdownlint.yaml
