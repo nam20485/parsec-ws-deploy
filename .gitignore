@@ -35,3 +35,9 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+deploy/.terraform.lock.hcl
+.gitignore
+.trunk/trunk.yaml
+.trunk/configs/.markdownlint.yaml
+deploy/connection.txt
+scratch disks uninitialized.png
