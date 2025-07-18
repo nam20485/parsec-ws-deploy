@@ -31,12 +31,12 @@ terraform {
 # You can change these default values or override them.
 variable "gcp_project" {
   description = "The GCP project ID to deploy to."
-  default     = "cloud" # <-- CHANGE THIS to your project ID
+  default     = "parsec-ws-deploy" # <-- CHANGE THIS to your project ID
 }
 
 variable "gcp_zone" {
   description = "The GCP zone to deploy to."
-  default     = "us-central1-a" # T4 GPUs are widely available here. Check for availability in your region.
+  default     = "us-west1-a" # T4 GPUs are widely available here. Check for availability in your region.
 }
 
 variable "instance_name" {
@@ -44,8 +44,15 @@ variable "instance_name" {
   default     = "parsec-workstation"
 }
 
+# Explicitly set the billing account to ensure the project is recognized as billable.
+variable "gcp_billing_account" {
+  description = "The GCP billing account ID to use."
+  default     = "01FD32-9F0EF2-099DD7"
+}
+
 provider "google" {
-  project = var.gcp_project
+  project         = var.gcp_project
+  billing_project = var.gcp_billing_account
 }
 
 # Define the Compute Engine instance
@@ -96,7 +103,7 @@ resource "google_compute_instance" "parsec_workstation" {
   # Pass the startup script to the instance.
   # This script will run on the first boot to configure the RAID array and install Parsec.
   metadata = {
-    windows-startup-script-ps1 = file("startup.ps1")
+    windows-startup-script-ps1 = file("../scripts/startup.ps1")
   }
 
   # Allow the instance to be deleted even if disks are attached
@@ -113,8 +120,8 @@ resource "google_compute_firewall" "allow_rdp" {
     ports    = ["3389"]
   }
   target_tags   = ["parsec-rdp"]
-  source_ranges = ["0.0.0.0/0"]
-}
+  source_ranges = ["50.47.212.98/32"]
+  }
 
 # Output the external IP of the instance after it's created
 output "instance_ip" {
