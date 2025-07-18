@@ -39,3 +39,5 @@ deploy/.terraform.lock.hcl
 .gitignore
 .trunk/trunk.yaml
 .trunk/configs/.markdownlint.yaml
+deploy/connection.txt
+scratch disks uninitialized.png
