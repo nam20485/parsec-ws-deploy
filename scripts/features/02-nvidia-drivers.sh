@@ -41,10 +41,11 @@ apt-get install -y nvidia-container-toolkit
 
 # Install CUDA toolkit
 echo "Installing CUDA toolkit..."
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
-dpkg -i cuda-keyring_1.0-1_all.deb
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
+rm cuda-keyring_1.1-1_all.deb
 apt-get update
-apt-get install -y cuda-toolkit-12-2
+apt-get -y install cuda-toolkit-12-4
 
 # Add CUDA to PATH
 echo "Configuring CUDA environment..."
