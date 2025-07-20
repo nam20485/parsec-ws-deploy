@@ -19,7 +19,7 @@ variable "gcp_project_ubuntu" {
 
 variable "gcp_zone_ubuntu" {
   description = "The GCP zone to deploy to."
-  default     = "us-central1-b" # T4 GPUs are widely available here. Check for availability in your region.
+  default     = "us-east1-c" # T4 GPUs are widely available here. Check for availability in your region.
 }
 
 variable "instance_name_ubuntu" {
@@ -47,7 +47,7 @@ resource "google_compute_instance" "ubuntu_server" {
   name         = var.instance_name_ubuntu
   machine_type = "n1-standard-16" # 16 vCPUs, 60 GB RAM.
   tags         = ["ubuntu-server"]
-
+  
   # Define the boot disk with Ubuntu 22.04 LTS (latest LTS)
   boot_disk {
     initialize_params {
@@ -97,6 +97,7 @@ resource "google_compute_instance" "ubuntu_server" {
   # This script will run on the first boot and execute all feature scripts
   metadata = {
     startup-script = file("../scripts/bootstrap-startup.sh")
+    enable-oslogin = true
   }
 
   # Allow the instance to be deleted even if disks are attached
@@ -110,7 +111,7 @@ resource "google_compute_disk" "storage_disk_hyperdisk" {
   zone     = var.gcp_zone_ubuntu
   name     = "${var.instance_name_ubuntu}-storage-disk"
   type     = "pd-ssd" # Use pd-ssd for high-performance storage.
-  size     = 340                  # Total size in GB.
+  size     = 100                  # Total size in GB.
 }
 
 # Firewall rule to allow SSH from specific IP address.
