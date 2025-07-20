@@ -5,7 +5,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.50.0"
+      version = ">= 6.44.0"
     }
   }
 }
@@ -19,7 +19,7 @@ variable "gcp_project_ubuntu" {
 
 variable "gcp_zone_ubuntu" {
   description = "The GCP zone to deploy to."
-  default     = "us-east1-c" # T4 GPUs are widely available here. Check for availability in your region.
+  default     = "us-west1-b" # T4 GPUs are widely available here. Check for availability in your region.
 }
 
 variable "instance_name_ubuntu" {
@@ -45,16 +45,16 @@ resource "google_compute_instance" "ubuntu_server" {
   project      = var.gcp_project_ubuntu
   zone         = var.gcp_zone_ubuntu
   name         = var.instance_name_ubuntu
-  machine_type = "g2-standard-12" # 12 vCPUs, 48 GB RAM. A more powerful option.
+  machine_type = "n1-standard-16" # 16 vCPUs, 60 GB RAM.
   tags         = ["ubuntu-server"]
 
   # Define the boot disk with Ubuntu 22.04 LTS (latest LTS)
   boot_disk {
     initialize_params {
-      image            = "ubuntu-os-cloud/ubuntu-2504-lts"
-      size             = 50 # 50GB is plenty for a boot disk.
-      type             = "hyperdisk-balanced" # Balanced is perfect for boot disks.
-      provisioned_iops = 3000                 # Default IOPS for this size.
+      image = "ubuntu-os-cloud/ubuntu-2404-noble-v20250716" # Use the image family for automatic updates
+      size  = 60 # Min 60GB recommended for boot disk with desktop env
+      type  = "pd-balanced" # pd-extreme is very expensive and not ideal for a boot disk.
+      # 'provisioned_iops' has no effect on pd-extreme or pd-balanced.
     }
   }
 
@@ -86,8 +86,8 @@ resource "google_compute_instance" "ubuntu_server" {
 
   # Define the network interface and allow SSH access
   network_interface {
-    network = "default"
-    nic_type = "GVNIC" # Required for G2 machine types for higher performance.
+    network  = "default"
+    nic_type = "GVNIC" # Recommended for N1 for higher performance networking.
     access_config {
       // Ephemeral public IP
     }
@@ -109,12 +109,12 @@ resource "google_compute_disk" "storage_disk_hyperdisk" {
   project  = var.gcp_project_ubuntu
   zone     = var.gcp_zone_ubuntu
   name     = "${var.instance_name_ubuntu}-storage-disk"
-  type     = "hyperdisk-balanced" # Balanced offers the best price/performance.
-  size     = 1000 # Total size in GB, matching the old RAID array
+  type     = "hyperdisk-balanced" # Use Hyperdisk to decouple performance from size.
+  size     = 400                  # Total size in GB.
 
   # Provision strong, balanced performance without the extreme cost.
-  provisioned_iops       = 15000 # Excellent IOPS for most workloads.
-  provisioned_throughput = 500   # Solid throughput for large file access.
+  provisioned_iops       = 10000 # Excellent IOPS for most workloads.
+  provisioned_throughput = 400   # Solid throughput for large file access.
 }
 
 # Firewall rule to allow SSH from specific IP address.
