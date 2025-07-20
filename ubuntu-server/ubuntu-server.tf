@@ -19,7 +19,7 @@ variable "gcp_project_ubuntu" {
 
 variable "gcp_zone_ubuntu" {
   description = "The GCP zone to deploy to."
-  default     = "us-west1-b" # T4 GPUs are widely available here. Check for availability in your region.
+  default     = "us-central1-b" # T4 GPUs are widely available here. Check for availability in your region.
 }
 
 variable "instance_name_ubuntu" {
@@ -51,7 +51,7 @@ resource "google_compute_instance" "ubuntu_server" {
   # Define the boot disk with Ubuntu 22.04 LTS (latest LTS)
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2404-noble-v20250716" # Use the image family for automatic updates
+      image = "ubuntu-os-cloud/ubuntu-2404-lts-amd64" # Use the image family for automatic updates
       size  = 60 # Min 60GB recommended for boot disk with desktop env
       type  = "pd-balanced" # pd-extreme is very expensive and not ideal for a boot disk.
       # 'provisioned_iops' has no effect on pd-extreme or pd-balanced.
@@ -103,18 +103,14 @@ resource "google_compute_instance" "ubuntu_server" {
   allow_stopping_for_update = true
 }
 
-# Create the persistent disk for storage (hyperdisk-balanced)
+# Create the persistent disk for storage (pd-ssd)
 resource "google_compute_disk" "storage_disk_hyperdisk" {
   provider = google.ubuntu
   project  = var.gcp_project_ubuntu
   zone     = var.gcp_zone_ubuntu
   name     = "${var.instance_name_ubuntu}-storage-disk"
-  type     = "hyperdisk-balanced" # Use Hyperdisk to decouple performance from size.
-  size     = 400                  # Total size in GB.
-
-  # Provision strong, balanced performance without the extreme cost.
-  provisioned_iops       = 10000 # Excellent IOPS for most workloads.
-  provisioned_throughput = 400   # Solid throughput for large file access.
+  type     = "pd-ssd" # Use pd-ssd for high-performance storage.
+  size     = 340                  # Total size in GB.
 }
 
 # Firewall rule to allow SSH from specific IP address.
