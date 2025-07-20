@@ -1,0 +1,148 @@
+{
+  "canIpForward": false,
+  "cpuPlatform": "Unknown CPU Platform",
+  "creationTimestamp": "2025-07-17T19:49:20.016-07:00",
+  "deletionProtection": false,
+  "disks": [
+    {
+      "architecture": "X86_64",
+      "guestOsFeatures": [
+        {
+          "type": "MULTI_IP_SUBNET"
+        },
+        {
+          "type": "UEFI_COMPATIBLE"
+        },
+        {
+          "type": "VIRTIO_SCSI_MULTIQUEUE"
+        },
+        {
+          "type": "GVNIC"
+        },
+        {
+          "type": "WINDOWS"
+        }
+      ],
+      "type": "PERSISTENT",
+      "licenses": [
+        "projects/windows-cloud/global/licenses/windows-server-2022-dc"
+      ],
+      "deviceName": "persistent-disk-0",
+      "autoDelete": true,
+      "source": "projects/parsec-ws-deploy/zones/us-east1-c/disks/parsec-workstation",
+      "index": 0,
+      "boot": true,
+      "kind": "compute#attachedDisk",
+      "mode": "READ_WRITE",
+      "interface": "SCSI",
+      "diskSizeGb": "100"
+    },
+    {
+      "type": "SCRATCH",
+      "savedState": "DISK_SAVED_STATE_UNSPECIFIED",
+      "deviceName": "local-ssd-0",
+      "autoDelete": true,
+      "index": 1,
+      "boot": false,
+      "kind": "compute#attachedDisk",
+      "mode": "READ_WRITE",
+      "interface": "NVME",
+      "diskSizeGb": "375"
+    },
+    {
+      "type": "SCRATCH",
+      "savedState": "DISK_SAVED_STATE_UNSPECIFIED",
+      "deviceName": "local-ssd-1",
+      "autoDelete": true,
+      "index": 2,
+      "boot": false,
+      "kind": "compute#attachedDisk",
+      "mode": "READ_WRITE",
+      "interface": "NVME",
+      "diskSizeGb": "375"
+    }
+  ],
+  "fingerprint": "BYRDAlDU3Zg=",
+  "guestAccelerators": [
+    {
+      "acceleratorCount": 1,
+      "acceleratorType": "projects/parsec-ws-deploy/zones/us-east1-c/acceleratorTypes/nvidia-tesla-t4-vws"
+    }
+  ],
+  "id": "6281294591481350336",
+  "kind": "compute#instance",
+  "labelFingerprint": "rvO_0RI_Xz0=",
+  "labels": {
+    "goog-terraform-provisioned": "true",
+    "goog-ops-agent-policy": "v2-x86-template-1-4-0"
+  },
+  "lastStartTimestamp": "2025-07-17T19:49:48.240-07:00",
+  "lastStopTimestamp": "2025-07-18T08:50:42.163-07:00",
+  "machineType": "projects/parsec-ws-deploy/zones/us-east1-c/machineTypes/n1-standard-8",
+  "metadata": {
+    "fingerprint": "gwPP1rdgSYQ=",
+    "kind": "compute#metadata",
+    "items": [
+      {
+        "value": "# startup.ps1 (v2 - More Robust)\r\n# This script runs on the first boot of the Windows VM.\r\n\r\n# --- Part 0: Setup Logging ---\r\n$logPath = \"C:\\startup-log.txt\"\r\nfunction Write-Log {\r\n    param ([string]$message)\r\n    $timestamp = Get-Date -Format \"yyyy-MM-dd HH:mm:ss\"\r\n    $logMessage = \"[$timestamp] $message\"\r\n    Add-Content -Path $logPath -Value $logMessage\r\n    Write-Output $logMessage\r\n}\r\n\r\nWrite-Log \"Startup script started.\"\r\n\r\ntry {\r\n    # --- Part 1: Wait for and Configure RAID 0 Array ---\r\n    Write-Log \"Waiting for uninitialized disks to appear...\"\r\n    $disks = $null\r\n    $timeout = 15 # Wait up to 15 * 10 = 150 seconds\r\n    $count = 0\r\n\r\n    while ($count -lt $timeout) {\r\n        $disks = Get-Disk | Where-Object { $_.PartitionStyle -eq 'Raw' -and $_.Number -ne 0 }\r\n        if ($disks.Count -ge 2) {\r\n            Write-Log \"Found 2 or more raw disks. Proceeding with RAID configuration.\"\r\n            break\r\n        }\r\n        Write-Log \"Disks not ready yet. Waiting 10 seconds...\"\r\n        Start-Sleep -s 10\r\n        $count++\r\n    }\r\n\r\n    if ($disks.Count -lt 2) {\r\n        throw \"Timed out waiting for 2 raw disks to appear. Please check the instance configuration.\"\r\n    }\r\n\r\n    Write-Log \"Initializing disks and creating RAID 0 volume...\"\r\n    $raidScript = \"\r\n        # Bring the disks online, initialize as GPT, and create a new striped volume (RAID 0)\r\n        $disks | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize | Format-Volume -FileSystem NTFS -NewFileSystemLabel 'RAID0_Fast_Storage' -Confirm:$false\r\n    \"\r\n    \r\n    # Using Invoke-Command to ensure it runs in the correct scope\r\n    Invoke-Command -ScriptBlock ([ScriptBlock]::Create($raidScript))\r\n    Write-Log \"RAID 0 volume created successfully.\"\r\n\r\n    # --- Part 2: Download and Install Parsec ---\r\n    Write-Log \"Starting Parsec installation...\"\r\n    $downloadPath = \"C:\\Users\\admin\\Downloads\"\r\n    $installerUrl = \"https://builds.parsec.app/package/parsec-windows.exe\"\r\n    $installerPath = Join-Path $downloadPath \"parsec-windows.exe\"\r\n\r\n    if (-not (Test-Path $downloadPath)) {\r\n        New-Item -Path $downloadPath -ItemType Directory\r\n    }\r\n\r\n    Write-Log \"Downloading Parsec installer...\"\r\n    (New-Object System.Net.WebClient).DownloadFile($installerUrl, $installerPath)\r\n\r\n    Write-Log \"Running Parsec installer silently...\"\r\n    Start-Process -FilePath $installerPath -ArgumentList \"/silent\" -Wait\r\n    Write-Log \"Parsec installation complete.\"\r\n\r\n}\r\ncatch {\r\n    Write-Log \"AN ERROR OCCURRED: $($_.Exception.Message)\"\r\n}\r\nfinally {\r\n    Write-Log \"Startup script finished.\"\r\n}\r\n",
+        "key": "windows-startup-script-ps1"
+      }
+    ]
+  },
+  "name": "parsec-workstation",
+  "networkInterfaces": [
+    {
+      "stackType": "IPV4_ONLY",
+      "name": "nic0",
+      "network": "projects/parsec-ws-deploy/global/networks/default",
+      "accessConfigs": [
+        {
+          "name": "external-nat",
+          "type": "ONE_TO_ONE_NAT",
+          "kind": "compute#accessConfig",
+          "networkTier": "PREMIUM"
+        }
+      ],
+      "subnetwork": "projects/parsec-ws-deploy/regions/us-east1/subnetworks/default",
+      "networkIP": "10.142.0.2",
+      "fingerprint": "F8C6cIievkY=",
+      "kind": "compute#networkInterface"
+    }
+  ],
+  "resourceStatus": {
+    "scheduling": {}
+  },
+  "satisfiesPzi": true,
+  "scheduling": {
+    "onHostMaintenance": "TERMINATE",
+    "provisioningModel": "STANDARD",
+    "automaticRestart": true,
+    "preemptible": false
+  },
+  "selfLink": "projects/parsec-ws-deploy/zones/us-east1-c/instances/parsec-workstation",
+  "shieldedInstanceConfig": {
+    "enableSecureBoot": false,
+    "enableVtpm": true,
+    "enableIntegrityMonitoring": true
+  },
+  "shieldedInstanceIntegrityPolicy": {
+    "updateAutoLearnPolicy": true
+  },
+  "shieldedVmConfig": {
+    "enableSecureBoot": false,
+    "enableVtpm": true,
+    "enableIntegrityMonitoring": true
+  },
+  "shieldedVmIntegrityPolicy": {
+    "updateAutoLearnPolicy": true
+  },
+  "startRestricted": false,
+  "status": "TERMINATED",
+  "tags": {
+    "items": [
+      "parsec-rdp"
+    ],
+    "fingerprint": "GST1R3kJMkY="
+  },
+  "zone": "projects/parsec-ws-deploy/zones/us-east1-c"
+}

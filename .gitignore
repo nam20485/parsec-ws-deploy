@@ -41,3 +41,4 @@ deploy/.terraform.lock.hcl
 .trunk/configs/.markdownlint.yaml
 deploy/connection.txt
 scratch disks uninitialized.png
+ubuntu-server/plan.out
