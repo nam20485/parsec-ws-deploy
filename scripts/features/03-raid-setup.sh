@@ -1,100 +1,48 @@
 #!/bin/bash
 
-# Feature Script: RAID Setup
-# Sets up RAID 0 array using the two attached persistent disks
+# Feature Script: Mount Data Disk
+# Formats and mounts the single attached data disk.
 
 set -e
 
-echo "Starting RAID setup..."
+echo "Starting data disk setup..."
 
-# Install mdadm for software RAID
-echo "Installing mdadm..."
-apt-get update
-apt-get install -y mdadm
+DATA_DISK_DEVICE=""
+MOUNT_POINT="/data" # A common mount point for data disks
 
-# Identify the attached disks (excluding boot disk)
-echo "Identifying available disks..."
-lsblk
+# Dynamically find the data disk (all 'disk' type devices except the one hosting the root partition)
+BOOT_DISK_NAME=$(lsblk -no pkname "$(findmnt -n -o SOURCE /)")
+DATA_DISKS=($(lsblk -dno NAME,TYPE | awk -v boot_disk="$BOOT_DISK_NAME" '$2 == "disk" && $1 != boot_disk {print "/dev/"$1}'))
 
-# The attached disks should be /dev/sdb and /dev/sdc (assuming /dev/sda is boot disk)
-DISK1="/dev/sdb"
-DISK2="/dev/sdc"
-
-# Verify disks exist
-if [[ ! -b "$DISK1" ]]; then
-    echo "ERROR: Disk $DISK1 not found"
-    lsblk
+if [[ ${#DATA_DISKS[@]} -eq 1 ]]; then
+    DATA_DISK_DEVICE="${DATA_DISKS[0]}"
+    echo "Found data disk: $DATA_DISK_DEVICE"
+elif [[ ${#DATA_DISKS[@]} -gt 1 ]]; then
+    echo "ERROR: Found multiple non-boot disks. This script is for a single data disk."
     exit 1
-fi
-
-if [[ ! -b "$DISK2" ]]; then
-    echo "ERROR: Disk $DISK2 not found" 
-    lsblk
-    exit 1
-fi
-
-echo "Found disks for RAID:"
-echo "  - $DISK1: $(lsblk -dno SIZE $DISK1)"
-echo "  - $DISK2: $(lsblk -dno SIZE $DISK2)"
-
-# Check if RAID array already exists
-if [[ -b "/dev/md0" ]]; then
-    echo "RAID array /dev/md0 already exists. Skipping RAID creation."
-    mdadm --detail /dev/md0
+else
+    echo "No data disks found to mount. Skipping."
     exit 0
 fi
 
-# Create RAID 0 array
-echo "Creating RAID 0 array..."
-mdadm --create --verbose /dev/md0 --level=0 --raid-devices=2 $DISK1 $DISK2
+# Check if the disk is already formatted with a filesystem
+if ! blkid -p -o value -s TYPE "$DATA_DISK_DEVICE" >/dev/null 2>&1; then
+    echo "Formatting ${DATA_DISK_DEVICE} with ext4 filesystem..."
+    mkfs.ext4 -F "$DATA_DISK_DEVICE"
+else
+    echo "Disk ${DATA_DISK_DEVICE} already has a filesystem. Skipping format."
+fi
 
-# Wait for array to be ready
-echo "Waiting for RAID array to be ready..."
-sleep 5
+# Create mount point and mount the disk
+mkdir -p "$MOUNT_POINT"
+mount "$DATA_DISK_DEVICE" "$MOUNT_POINT"
 
-# Verify RAID array
-echo "Verifying RAID array..."
-mdadm --detail /dev/md0
+# Add to /etc/fstab for persistence across reboots
+if ! grep -q "${DATA_DISK_DEVICE}" /etc/fstab; then
+    echo "Adding ${DATA_DISK_DEVICE} to /etc/fstab..."
+    echo "${DATA_DISK_DEVICE} ${MOUNT_POINT} ext4 defaults,nofail 0 2" >> /etc/fstab
+fi
 
-# Create filesystem on RAID array
-echo "Creating ext4 filesystem on RAID array..."
-mkfs.ext4 -F /dev/md0
-
-# Create mount point
-echo "Creating mount point..."
-mkdir -p /mnt/raid
-
-# Mount the RAID array
-echo "Mounting RAID array..."
-mount /dev/md0 /mnt/raid
-
-# Add to /etc/fstab for persistent mounting
-echo "Adding RAID array to /etc/fstab..."
-echo "/dev/md0 /mnt/raid ext4 defaults 0 2" >> /etc/fstab
-
-# Save RAID configuration
-echo "Saving RAID configuration..."
-mdadm --detail --scan >> /etc/mdadm/mdadm.conf
-
-# Update initramfs
-echo "Updating initramfs..."
-update-initramfs -u
-
-# Set permissions
-echo "Setting permissions..."
-chmod 755 /mnt/raid
-chown root:root /mnt/raid
-
-# Display final status
-echo "RAID setup completed!"
-echo ""
-echo "=== RAID Array Status ==="
-mdadm --detail /dev/md0
-echo ""
-echo "=== Filesystem Info ==="
-df -h /mnt/raid
-echo ""
-echo "=== Mount Point ==="
-echo "RAID array mounted at: /mnt/raid"
-
-echo "✓ RAID setup completed successfully"
+chmod -R 777 "$MOUNT_POINT"
+echo "✓ Data disk mounted successfully at ${MOUNT_POINT}"
+df -h "$MOUNT_POINT"

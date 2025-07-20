@@ -52,9 +52,9 @@ resource "google_compute_instance" "ubuntu_server" {
   boot_disk {
     initialize_params {
       image            = "ubuntu-os-cloud/ubuntu-2204-lts"
-      size             = 50 # Boot disk size in GB
-      type             = "hyperdisk-balanced"
-      provisioned_iops = 3000 # Provision IOPS for the boot disk
+      size             = 50 # 50GB is plenty for a boot disk.
+      type             = "hyperdisk-balanced" # Balanced is perfect for boot disks.
+      provisioned_iops = 3000                 # Default IOPS for this size.
     }
   }
 
@@ -78,6 +78,10 @@ resource "google_compute_instance" "ubuntu_server" {
   # This setting is required for vWS GPUs
   scheduling {
     on_host_maintenance = "TERMINATE"
+
+    # LEVERAGE POINT #3: Uncomment the line below to use a Spot VM.
+    # This can reduce VM/GPU costs by 60-91% but the instance can be stopped by Google.
+    # provisioning_model = "SPOT"
   }
 
   # Define the network interface and allow SSH access
@@ -106,12 +110,12 @@ resource "google_compute_disk" "storage_disk_hyperdisk" {
   project  = var.gcp_project_ubuntu
   zone     = var.gcp_zone_ubuntu
   name     = "${var.instance_name_ubuntu}-storage-disk"
-  type     = "hyperdisk-balanced"
+  type     = "hyperdisk-balanced" # Balanced offers the best price/performance.
   size     = 1000 # Total size in GB, matching the old RAID array
 
-  # Provision performance to match or exceed the previous RAID 0 array
-  provisioned_iops       = 30000 # Combined IOPS of two 500GB pd-ssd disks
-  provisioned_throughput = 1320  # Combined throughput (MB/s) of two 500GB pd-ssd disks
+  # Provision strong, balanced performance without the extreme cost.
+  provisioned_iops       = 15000 # Excellent IOPS for most workloads.
+  provisioned_throughput = 500   # Solid throughput for large file access.
 }
 
 # Firewall rule to allow SSH from specific IP address.
