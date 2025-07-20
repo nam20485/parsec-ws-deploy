@@ -51,22 +51,17 @@ resource "google_compute_instance" "ubuntu_server" {
   # Define the boot disk with Ubuntu 22.04 LTS (latest LTS)
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
-      size  = 20 # Small boot disk size in GB
-      type  = "pd-extreme"
+      image            = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size             = 50 # Boot disk size in GB
+      type             = "hyperdisk-balanced"
+      provisioned_iops = 3000 # Provision IOPS for the boot disk
     }
   }
 
-  # First persistent disk for RAID storage (using Hyperdisk Balanced)
+  # Attach a single, high-performance Hyperdisk instead of a RAID array.
+  # This simplifies management and provides predictable performance.
   attached_disk {
-    source      = google_compute_disk.storage_disk_1.id
-    device_name = "storage-disk-1"
-  }
-
-  # Second persistent disk for RAID storage (using Hyperdisk Balanced)
-  attached_disk {
-    source      = google_compute_disk.storage_disk_2.id
-    device_name = "storage-disk-2"
+    source = google_compute_disk.storage_disk_hyperdisk.id
   }
 
   # Add a small scratch disk (Local SSD)
@@ -94,33 +89,29 @@ resource "google_compute_instance" "ubuntu_server" {
   }
 
   # Pass the startup script to the instance.
-  # This script will run on the first boot to configure the RAID array
+  # This script will run on the first boot and execute all feature scripts
+  # IMPORTANT: With a single data disk, '03-raid-setup.sh' will fail.
+  # You must replace it with a script to format and mount the single disk.
   metadata = {
-    startup-script = file("../scripts/ubuntu-startup.sh")
+    startup-script = file("../scripts/main-startup.sh")
   }
 
   # Allow the instance to be deleted even if disks are attached
   allow_stopping_for_update = true
 }
 
-# Create the first persistent disk for RAID storage (pd-ssd)
-resource "google_compute_disk" "storage_disk_1" {
+# Create the persistent disk for storage (hyperdisk-balanced)
+resource "google_compute_disk" "storage_disk_hyperdisk" {
   provider = google.ubuntu
   project  = var.gcp_project_ubuntu
   zone     = var.gcp_zone_ubuntu
-  name     = "${var.instance_name_ubuntu}-storage-disk-1"
-  type     = "pd-ssd" # Using pd-ssd for high performance without IOPS charges
-  size     = 500      # Size in GB - adjust as needed
-}
+  name     = "${var.instance_name_ubuntu}-storage-disk"
+  type     = "hyperdisk-balanced"
+  size     = 1000 # Total size in GB, matching the old RAID array
 
-# Create the second persistent disk for RAID storage (pd-ssd)
-resource "google_compute_disk" "storage_disk_2" {
-  provider = google.ubuntu
-  project  = var.gcp_project_ubuntu
-  zone     = var.gcp_zone_ubuntu
-  name     = "${var.instance_name_ubuntu}-storage-disk-2"
-  type     = "pd-ssd" # Using pd-ssd for high performance without IOPS charges
-  size     = 500      # Size in GB - adjust as needed
+  # Provision performance to match or exceed the previous RAID 0 array
+  provisioned_iops       = 30000 # Combined IOPS of two 500GB pd-ssd disks
+  provisioned_throughput = 1320  # Combined throughput (MB/s) of two 500GB pd-ssd disks
 }
 
 # Firewall rule to allow SSH from specific IP address.
@@ -143,10 +134,6 @@ output "ubuntu_instance_ip" {
 }
 
 # Output the disk names for reference
-output "storage_disk_1_name" {
-  value = google_compute_disk.storage_disk_1.name
-}
-
-output "storage_disk_2_name" {
-  value = google_compute_disk.storage_disk_2.name
+output "storage_disk_name" {
+  value = google_compute_disk.storage_disk_hyperdisk.name
 }
