@@ -1,7 +1,7 @@
 # Dockerfile for functionally testing the GCE startup scripts
 
 # Use the same base OS as specified in your ubuntu-server.tf
-FROM ubuntu:24.04
+FROM ubuntu:25.04
 
 # Set non-interactive frontend to avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     sudo \
     procps \
-    lspci \
+    software-properties-common \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the entire scripts directory into a path that mirrors the bootstrap script's logic
@@ -27,7 +28,8 @@ WORKDIR /opt/parsec-ws-deploy/scripts
 
 # Make the main startup script executable
 RUN chmod +x main-startup.sh
+RUN chmod +x bootstrap-startup.sh
 
 # Define the command to run when the container starts. This simulates the final
 # step of your bootstrap-startup.sh script.
-CMD ["./main-startup.sh"]
+CMD ["./bootstrap-startup.sh"]
