@@ -95,10 +95,8 @@ resource "google_compute_instance" "ubuntu_server" {
 
   # Pass the startup script to the instance.
   # This script will run on the first boot and execute all feature scripts
-  # IMPORTANT: With a single data disk, '03-raid-setup.sh' will fail.
-  # You must replace it with a script to format and mount the single disk.
   metadata = {
-    startup-script = file("../scripts/main-startup.sh")
+    startup-script = file("../scripts/bootstrap-startup.sh")
   }
 
   # Allow the instance to be deleted even if disks are attached
