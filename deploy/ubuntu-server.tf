@@ -45,13 +45,13 @@ resource "google_compute_instance" "ubuntu_server" {
   project      = var.gcp_project_ubuntu
   zone         = var.gcp_zone_ubuntu
   name         = var.instance_name_ubuntu
-  machine_type = "n1-standard-8" # 8 vCPUs, 30 GB RAM. Adjust as needed.
+  machine_type = "g2-standard-12" # 12 vCPUs, 48 GB RAM. A more powerful option.
   tags         = ["ubuntu-server"]
 
   # Define the boot disk with Ubuntu 22.04 LTS (latest LTS)
   boot_disk {
     initialize_params {
-      image            = "ubuntu-os-cloud/ubuntu-2204-lts"
+      image            = "ubuntu-os-cloud/ubuntu-2404-lts"
       size             = 50 # 50GB is plenty for a boot disk.
       type             = "hyperdisk-balanced" # Balanced is perfect for boot disks.
       provisioned_iops = 3000                 # Default IOPS for this size.
@@ -87,6 +87,7 @@ resource "google_compute_instance" "ubuntu_server" {
   # Define the network interface and allow SSH access
   network_interface {
     network = "default"
+    nic_type = "GVNIC" # Required for G2 machine types for higher performance.
     access_config {
       // Ephemeral public IP
     }
