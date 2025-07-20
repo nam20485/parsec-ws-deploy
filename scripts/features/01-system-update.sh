@@ -1,6 +1,9 @@
+# Feature Script: System Update and Package Installation
+# Renamed to 01-system-update.sh
 #!/bin/bash
 
 # Feature Script: System Update and Package Installation
+# Renamed to 02-system-update.sh
 # Updates the system and installs essential packages
 
 set -e
