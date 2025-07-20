@@ -53,7 +53,7 @@ resource "google_compute_instance" "ubuntu_server" {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
       size  = 20 # Small boot disk size in GB
-      type  = "pd-ssd"
+      type  = "pd-extreme"
     }
   }
 
@@ -103,30 +103,24 @@ resource "google_compute_instance" "ubuntu_server" {
   allow_stopping_for_update = true
 }
 
-# Create the first persistent disk for RAID storage (Hyperdisk Balanced)
+# Create the first persistent disk for RAID storage (pd-ssd)
 resource "google_compute_disk" "storage_disk_1" {
   provider = google.ubuntu
   project  = var.gcp_project_ubuntu
   zone     = var.gcp_zone_ubuntu
   name     = "${var.instance_name_ubuntu}-storage-disk-1"
-  type     = "hyperdisk-balanced" # Using Hyperdisk Balanced for better performance
-  size     = 500                  # Size in GB - adjust as needed
-
-  # Hyperdisk specific settings
-  provisioned_iops = 3000 # Adjust IOPS as needed
+  type     = "pd-ssd" # Using pd-ssd for high performance without IOPS charges
+  size     = 500      # Size in GB - adjust as needed
 }
 
-# Create the second persistent disk for RAID storage (Hyperdisk Balanced)
+# Create the second persistent disk for RAID storage (pd-ssd)
 resource "google_compute_disk" "storage_disk_2" {
   provider = google.ubuntu
   project  = var.gcp_project_ubuntu
   zone     = var.gcp_zone_ubuntu
   name     = "${var.instance_name_ubuntu}-storage-disk-2"
-  type     = "hyperdisk-balanced" # Using Hyperdisk Balanced for better performance
-  size     = 500                  # Size in GB - adjust as needed
-
-  # Hyperdisk specific settings
-  provisioned_iops = 3000 # Adjust IOPS as needed
+  type     = "pd-ssd" # Using pd-ssd for high performance without IOPS charges
+  size     = 500      # Size in GB - adjust as needed
 }
 
 # Firewall rule to allow SSH from specific IP address.
