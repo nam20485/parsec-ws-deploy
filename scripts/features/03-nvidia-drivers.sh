@@ -36,21 +36,38 @@ sudo apt install -y linux-headers-$(uname -r)
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
 sudo update-alternatives --config gcc
 
+ sudo dpkg -i cuda-repo-ubuntu2404-X-Y-local_<version>*_x86_64.deb
+ sudo cp /var/cuda-repo-ubuntu2404-X-Y-local/cuda-*-keyring.gpg /usr/share/keyrings/
 
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/cuda-ubuntu2404.pin
+sudo mv cuda-<distro>.pin /etc/apt/preferences.d/cuda-repository-pin-600
 
-# Install NVIDIA container toolkit (useful for Docker/containers)
-echo "Installing NVIDIA container toolkit..."curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
-  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+wget https://developer.download.nvidia.com/compute/cuda/repos/<distro>/<arch>/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+dpkg -i cuda-keyring_1.1-1_all.deb
 
-apt-get update
-export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.17.8-1
-  sudo apt-get install -y \
-      nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
-      nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
-      libnvidia-container-tools=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
-      libnvidia-container1=${NVIDIA_CONTAINER_TOOLKIT_VERSION}
+ apt update
+ apt install cuda-toolkit
+ apt install nvidia-gds
+
+ echo "export PATH=${PATH}:/usr/local/cuda-12.9/bin" >> /etc/profile.d/cuda.sh
+
+# curl -O https://storage.googleapis.com/nvidia-drivers-us-public/GRID/vGPU16.10/NVIDIA-Linux-x86_64-535.247.01-grid.run
+# sudo bash ./NVIDIA-Linux-x86_64-535.247.01-grid.run
+
+# # Install NVIDIA container toolkit (useful for Docker/containers)
+# echo "Installing NVIDIA container toolkit..."curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+#   && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+#     sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+#     sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+#apt-get update
+# export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.17.8-1
+#   sudo apt-get install -y \
+#       nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+#       nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+#       libnvidia-container-tools=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+#       libnvidia-container1=${NVIDIA_CONTAINER_TOOLKIT_VERSION}
 
 # Install CUDA toolkit
 echo "Installing CUDA toolkit..."
