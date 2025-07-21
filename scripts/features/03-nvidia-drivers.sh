@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Feature Script: NVIDIA GPU Driver Installation
+# Renamed to 03-nvidia-drivers.sh
 # Installs NVIDIA drivers and CUDA toolkit for Tesla T4 vWS GPU
 
 set -e
@@ -16,28 +17,40 @@ fi
 echo "NVIDIA GPU detected:"
 lspci | grep -i nvidia
 
-# Remove any existing NVIDIA drivers
-echo "Removing any existing NVIDIA drivers..."
-apt-get remove --purge -y nvidia-* || true
-apt-get autoremove -y || true
+# # Remove any existing NVIDIA drivers
+# echo "Removing any existing NVIDIA drivers..."
+# apt-get remove --purge -y nvidia-* || true
+# apt-get autoremove -y || true
 
-# Add NVIDIA driver repository
-echo "Adding NVIDIA driver repository..."
-add-apt-repository ppa:graphics-drivers/ppa -y
-apt-get update
+# # Add NVIDIA driver repository
+# echo "Adding NVIDIA driver repository..."
+# add-apt-repository ppa:graphics-drivers/ppa -y
+# apt-get update
 
-# Install NVIDIA driver (version 470+ supports T4 vWS)
-echo "Installing NVIDIA driver..."
-apt-get install -y nvidia-driver-535
+# # Install NVIDIA driver (version 470+ supports T4 vWS)
+# echo "Installing NVIDIA driver..."
+# apt-get install -y nvidia-driver-535
+
+sudo apt install -y gcc-12
+sudo apt install -y linux-headers-$(uname -r)
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
+sudo update-alternatives --config gcc
+
+
 
 # Install NVIDIA container toolkit (useful for Docker/containers)
-echo "Installing NVIDIA container toolkit..."
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | tee /etc/apt/sources.list.d/nvidia-docker.list
+echo "Installing NVIDIA container toolkit..."curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
 apt-get update
-apt-get install -y nvidia-container-toolkit
+export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.17.8-1
+  sudo apt-get install -y \
+      nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+      nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+      libnvidia-container-tools=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
+      libnvidia-container1=${NVIDIA_CONTAINER_TOOLKIT_VERSION}
 
 # Install CUDA toolkit
 echo "Installing CUDA toolkit..."

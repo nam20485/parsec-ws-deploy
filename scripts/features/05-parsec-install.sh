@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Renamed to 06-parsec-install.sh
+#!/bin/bash
+
 # Feature Script: Parsec Installation
 # Downloads and installs the Parsec host application.
 
