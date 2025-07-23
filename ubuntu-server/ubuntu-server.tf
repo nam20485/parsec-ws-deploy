@@ -19,7 +19,7 @@ variable "gcp_project_ubuntu" {
 
 variable "gcp_zone_ubuntu" {
   description = "The GCP zone to deploy to."
-  default     = "us-east1-c" # T4 GPUs are widely available here. Check for availability in your region.
+  default     = "us-east1-d" # T4 GPUs are widely available here. Check for availability in your region.
 }
 
 variable "instance_name_ubuntu" {
